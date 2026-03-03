@@ -96,12 +96,12 @@
             border-radius: 12px; 
             overflow: hidden; 
             border: 1px solid #e2e8f0;
-            min-width: 800px;
+            min-width: 850px; /* Garante estrutura na exportação */
         }
         
         @media (max-width: 768px) {
             .timetable-grid { 
-                min-width: 700px;
+                min-width: 750px;
                 grid-template-columns: 80px repeat(5, 1fr); 
             }
         }
@@ -145,16 +145,20 @@
         .discipline-card.ead { background-color: #f0fdf4; border-left-color: #22c55e; }
 
         .btn-delete-cell {
-            position: absolute; top: -6px; right: -6px; width: 22px; height: 22px;
+            position: absolute; top: -2px; right: -2px; width: 20px; height: 20px;
             background: #ef4444; color: white; border-radius: 50%;
             display: none; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: bold; z-index: 30;
+            font-size: 10px; font-weight: bold; z-index: 30; border: 2px solid white;
         }
         .mode-free .discipline-card:hover .btn-delete-cell { display: flex; }
         
         @media (max-width: 768px) {
             .mode-free .btn-delete-cell { display: flex; }
         }
+
+        /* Classes para a imagem final */
+        .export-mode .btn-delete-cell { display: none !important; }
+        .export-mode { border-radius: 0 !important; }
 
         .modal { 
             display: none; 
@@ -173,12 +177,6 @@
             background-color: #3b82f6 !important; 
             color: white !important; 
         }
-
-        /* Classes para facilitar o print/captura */
-        .capturing {
-            width: 1200px !important; /* Força largura fixa durante captura */
-            overflow: visible !important;
-        }
     </style>
 </head>
 <body class="p-3 md:p-6">
@@ -190,12 +188,12 @@
                 <div class="flex-1">
                     <h1 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">UEM Bio <span class="text-blue-600">Cloud</span></h1>
                     <div class="flex items-center gap-2">
-                        <span class="bg-blue-100 text-blue-700 text-[9px] px-2 py-0.5 rounded-full font-bold">STABLE v2.4</span>
+                        <span class="bg-blue-100 text-blue-700 text-[9px] px-2 py-0.5 rounded-full font-bold">STABLE v2.5</span>
                         <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest">2026</p>
                     </div>
                 </div>
                 <div class="lg:hidden flex gap-2">
-                    <button onclick="downloadSchedule()" class="p-2.5 bg-green-50 text-green-600 rounded-xl">📸</button>
+                    <button onclick="downloadSchedule()" class="p-2.5 bg-green-50 text-green-600 rounded-xl" id="btnCaptureMobile">📸</button>
                     <button onclick="limparGradeCompleta()" class="p-2.5 bg-red-50 text-red-600 rounded-xl">🗑️</button>
                 </div>
             </div>
@@ -222,14 +220,16 @@
                     <div class="cell header">Quinta</div>
                     <div class="cell header">Sexta</div>
                 </div>
-                <div id="print-footer" class="hidden mt-6 text-center text-[10px] text-slate-400 font-black uppercase tracking-widest">
-                    Gerado em uem-bio-cloud.web.app • 2026
-                </div>
             </div>
+        </div>
+        
+        <!-- Rodapé Invisível que só aparece na captura -->
+        <div id="capture-footer" class="hidden text-center p-4 bg-white">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Gerado em uem-bio-cloud.web.app • 2026</p>
         </div>
     </div>
 
-    <!-- Modais (Mesma Estrutura) -->
+    <!-- Modais -->
     <div id="modalSelect" class="modal"><div class="modal-content bg-white rounded-3xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]"><div class="p-5 border-b flex justify-between items-center bg-slate-50"><h3 id="modalTitle" class="font-black text-slate-800 uppercase text-sm">Ação</h3><button onclick="closeModal('modalSelect')" class="w-8 h-8 flex items-center justify-center bg-slate-200 rounded-full text-slate-600 text-xs">✕</button></div><div class="p-4 bg-white sticky top-0 z-10"><input type="text" id="searchInput" placeholder="Busque disciplina..." class="w-full bg-slate-50 border-2 border-transparent rounded-2xl px-5 py-4 focus:border-blue-500 outline-none font-medium text-sm" oninput="filterDisciplines()"></div><div id="disciplinesList" class="flex-1 overflow-y-auto p-4 space-y-3 min-h-[300px]"></div><div class="p-5 border-t bg-slate-50 flex gap-3"><button id="btnRemoveCell" onclick="removeSelection()" class="px-4 py-3 bg-red-50 text-red-500 rounded-xl text-[10px] font-black uppercase">Remover</button><button onclick="closeModal('modalSelect')" class="flex-1 bg-slate-900 text-white py-4 rounded-xl font-bold text-xs uppercase">Fechar</button></div></div></div>
     <div id="modalCustom" class="modal"><div class="modal-content bg-white rounded-3xl w-full max-w-md p-6 shadow-2xl"><h3 class="font-black text-slate-800 text-xl mb-6 tracking-tight">Personalizado</h3><div class="space-y-4"><input type="text" id="customNome" placeholder="NOME DA ATIVIDADE" class="w-full bg-slate-50 rounded-2xl px-4 py-4 outline-none font-bold uppercase text-sm border-2 border-transparent focus:border-blue-500"><div class="grid grid-cols-2 gap-4"><input type="text" id="customCodigo" placeholder="CÓDIGO" class="bg-slate-50 rounded-2xl px-4 py-4 outline-none text-sm uppercase"><input type="text" id="customTurma" placeholder="TURMA" class="bg-slate-50 rounded-2xl px-4 py-4 outline-none text-sm uppercase"></div><div class="grid grid-cols-2 gap-4"><input type="text" id="customBloco" placeholder="BLOCO" class="bg-slate-50 rounded-2xl px-4 py-4 outline-none text-sm uppercase"><input type="text" id="customSala" placeholder="SALA" class="bg-slate-50 rounded-2xl px-4 py-4 outline-none text-sm uppercase"></div></div><div class="flex gap-3 mt-8"><button onclick="closeModal('modalCustom')" class="px-6 py-5 bg-slate-100 text-slate-500 rounded-2xl font-bold text-xs uppercase">Sair</button><button onclick="saveCustomDiscipline()" class="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black text-xs uppercase hover:bg-blue-700">Salvar</button></div></div></div>
     <div id="modalSheet" class="modal"><div class="modal-content bg-white rounded-3xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[90vh]"><div class="p-6 bg-slate-900 text-white flex justify-between items-center"><h2 class="font-black">Catálogo 2026</h2><button onclick="closeModal('modalSheet')" class="w-8 h-8 flex items-center justify-center bg-white/10 rounded-full">✕</button></div><div class="overflow-auto p-4"><table class="w-full text-left border-collapse"><thead class="sticky top-0 bg-white border-b"><tr class="text-[10px] font-black text-slate-400 uppercase"><th class="p-4">Cód</th><th class="p-4">Disciplina</th><th class="p-4">Local</th></tr></thead><tbody id="fullSheetBody" class="divide-y"></tbody></table></div></div></div>
@@ -358,57 +358,73 @@
             b.innerHTML = window.disciplinasGlobal.slice(0, 50).map(d => `<tr class="text-[11px] uppercase"><td class="p-4 font-black text-blue-600">${d.codigo}</td><td class="p-4 font-bold">${d.nome}</td><td class="p-4 text-slate-400">${d.bloco}/${d.sala}</td></tr>`).join('');
         }
 
-        // --- CORREÇÃO DO DOWNLOAD MOBILE ---
+        // --- SOLUÇÃO DEFINITIVA DE CAPTURA (CLONAGEM E ESTATIZAÇÃO) ---
         async function downloadSchedule() {
-            const wrapper = document.getElementById('grid-container');
             const grid = document.getElementById('grid');
-            const footer = document.getElementById('print-footer');
+            const footer = document.getElementById('capture-footer');
+            const btnMobile = document.getElementById('btnCaptureMobile');
             
-            // 1. Salva o estado original do scroll
-            const originalScrollLeft = wrapper.scrollLeft;
+            // 1. Feedback Visual
+            const originalBtnIcon = btnMobile.innerHTML;
+            btnMobile.innerHTML = "⏳";
             
-            // 2. Feedback visual
-            const isMobile = window.innerWidth < 768;
-            console.log("Iniciando captura...");
-
             try {
-                // 3. Prepara para captura: Reseta scroll e mostra footer
-                wrapper.scrollLeft = 0;
-                footer.classList.remove('hidden');
+                // 2. Criação do Clone para Captura (Fora do viewport e sem scroll)
+                const cloneContainer = document.createElement('div');
+                cloneContainer.style.position = 'absolute';
+                cloneContainer.style.top = '-9999px';
+                cloneContainer.style.left = '-9999px';
+                cloneContainer.style.width = '1200px'; // Largura total garantida
+                cloneContainer.style.backgroundColor = 'white';
+                cloneContainer.style.padding = '40px';
+                cloneContainer.classList.add('export-mode');
 
-                // 4. Configurações de renderização para Mobile
-                const options = {
-                    scale: isMobile ? 2 : 3, // Mobile usa escala 2 para não travar o browser
+                // Título no Print
+                const title = document.createElement('h2');
+                title.innerHTML = "UEM BIO CLOUD <span style='color:#3b82f6'>2026</span>";
+                title.style.fontFamily = 'Inter, sans-serif';
+                title.style.fontWeight = '900';
+                title.style.marginBottom = '20px';
+                title.style.textAlign = 'center';
+                cloneContainer.appendChild(title);
+
+                // Clone da Grade
+                const clonedGrid = grid.cloneNode(true);
+                clonedGrid.style.minWidth = '1120px'; // Garante que a tabela não esprema no clone
+                cloneContainer.appendChild(clonedGrid);
+
+                // Adiciona o rodapé ao clone
+                const clonedFooter = footer.cloneNode(true);
+                clonedFooter.classList.remove('hidden');
+                cloneContainer.appendChild(clonedFooter);
+
+                document.body.appendChild(cloneContainer);
+
+                // 3. Captura o Clone
+                const canvas = await html2canvas(cloneContainer, {
+                    scale: 2, // Escala 2 é o equilíbrio perfeito entre qualidade e memória no mobile
                     useCORS: true,
                     backgroundColor: "#ffffff",
                     logging: false,
-                    width: grid.scrollWidth, // Garante que pega a largura real da tabela
-                    height: grid.scrollHeight + 100,
-                    x: 0,
-                    y: 0,
-                    scrollX: 0,
-                    scrollY: 0
-                };
+                    allowTaint: true
+                });
 
-                const canvas = await html2canvas(grid, options);
-                
-                // 5. Gera o link de download
+                // 4. Download
                 const link = document.createElement('a');
                 link.download = `Grade-UEM-Bio-2026.jpg`;
-                link.href = canvas.toDataURL('image/jpeg', 0.9);
-                
-                // 6. Trigger do download
+                link.href = canvas.toDataURL('image/jpeg', 0.85);
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
 
+                // 5. Limpeza
+                document.body.removeChild(cloneContainer);
+
             } catch (err) {
-                console.error("Erro na captura:", err);
-                alert("Erro ao gerar imagem. Tente tirar um print da tela.");
+                console.error("Erro fatal na captura:", err);
+                alert("Falha ao gerar imagem no telemóvel. Tente usar o navegador Chrome ou tirar um print.");
             } finally {
-                // 7. Restaura o estado da interface
-                footer.classList.add('hidden');
-                wrapper.scrollLeft = originalScrollLeft;
+                btnMobile.innerHTML = originalBtnIcon;
             }
         }
 
